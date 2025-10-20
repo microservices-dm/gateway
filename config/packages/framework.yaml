@@ -1,12 +1,17 @@
 # see https://symfony.com/doc/current/reference/configuration/framework.html
 framework:
     secret: '%env(APP_SECRET)%'
-
-    # Note that the session will be started ONLY if you read or write from it.
-    session: true
-
-    #esi: true
-    #fragments: true
+    http_client:
+        scoped_clients:
+            user_service.client:
+                base_uri: 'http://user_service_nginx'
+                timeout: 30
+            product_service.client:
+                base_uri: 'http://product_service_nginx'
+                timeout: 30
+            order_service.client:
+                base_uri: 'http://order_service_nginx'
+                timeout: 30
 
 when@test:
     framework:
