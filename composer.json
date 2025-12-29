@@ -8,6 +8,7 @@
         "ext-ctype": "*",
         "ext-iconv": "*",
         "firebase/php-jwt": "^6.11",
+        "lexik/jwt-authentication-bundle": "^3.2",
         "symfony/cache": "7.3.*",
         "symfony/console": "7.3.*",
         "symfony/dotenv": "7.3.*",

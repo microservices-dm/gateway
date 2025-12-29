@@ -24,5 +24,8 @@ services:
         arguments:
             $jwtPublicKey: '%kernel.project_dir%/config/jwt/public.pem'
 
+    App\EventListener\JwtToHeaderListener:
+        tags:
+            - { name: kernel.event_listener, event: kernel.request, priority: 10 }
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones

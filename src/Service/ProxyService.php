@@ -46,7 +46,7 @@ class ProxyService
         $url = rtrim($serviceUrl, '/') . '/' . ltrim($path, '/');
 
         $options = [
-            'headers' => $this->prepareHeaders($request),
+            'headers' => $this->proxyToService($request->headers->all()),
             'body' => $request->getContent()
         ];
 
@@ -93,5 +93,21 @@ class ProxyService
         }
 
         return $headers;
+    }
+
+    public function proxyToService(
+        array $headers,
+    ): array {
+        // Фильтруем и передаём только нужные заголовки
+        $forwardHeaders = [
+            'X-User-Id' => $headers['x-user-id'] ?? null,
+            'X-User-Email' => $headers['x-user-email'] ?? null,
+            'X-User-Role' => $headers['x-user-role'] ?? null,
+            'Content-Type' => 'application/json',
+        ];
+
+        $forwardHeaders = array_filter($forwardHeaders);
+
+        return $forwardHeaders;
     }
 }
