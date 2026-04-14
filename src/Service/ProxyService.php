@@ -45,6 +45,11 @@ class ProxyService
         // Подготовка запроса к микросервису
         $url = rtrim($serviceUrl, '/') . '/' . ltrim($path, '/');
 
+        $queryString = $request->getQueryString();
+        if ($queryString) {
+            $url .= '?' . $queryString;
+        }
+
         $options = [
             'headers' => $this->proxyToService($request->headers->all()),
             'body' => $request->getContent()
