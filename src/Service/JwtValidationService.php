@@ -1,18 +1,20 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Service;
 
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
 use Symfony\Contracts\Cache\CacheInterface;
 
-class JwtValidationService
+class JwtValidationService implements JwtValidationServiceInterface
 {
-    private string $publicKey;
+    private readonly string $publicKey;
 
     public function __construct(
         private readonly CacheInterface $cache,
-        string $jwtPublicKey
+        string $jwtPublicKey,
     ) {
         $this->publicKey = file_get_contents($jwtPublicKey);
     }
@@ -20,26 +22,19 @@ class JwtValidationService
     public function validate(string $token): bool
     {
         try {
-            // Проверка blacklist
             $isBlacklisted = $this->cache->get(
                 'jwt_blacklist_' . md5($token),
-                fn() => null
+                fn() => null,
             );
 
             if ($isBlacklisted) {
                 return false;
             }
 
-            // Валидация JWT
-            $decoded = JWT::decode($token, new Key($this->publicKey, 'RS256'));
-
-            // Проверка expiration
-            if (isset($decoded->exp) && $decoded->exp < time()) {
-                return false;
-            }
+            JWT::decode($token, new Key($this->publicKey, 'RS256'));
 
             return true;
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return false;
         }
     }
@@ -50,11 +45,12 @@ class JwtValidationService
             $decoded = JWT::decode($token, new Key($this->publicKey, 'RS256'));
 
             return [
-                'id' => $decoded->sub ?? null,
+                // uid (UUID) — единый идентификатор пользователя для межсервисных ссылок
+                'id' => $decoded->user_uid ?? null,
                 'email' => $decoded->email ?? null,
-                'roles' => $decoded->roles ?? []
+                'roles' => $decoded->roles ?? [],
             ];
-        } catch (\Exception $e) {
+        } catch (\Exception) {
             return null;
         }
     }

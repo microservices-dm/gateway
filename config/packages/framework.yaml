@@ -4,13 +4,13 @@ framework:
     http_client:
         scoped_clients:
             user_service.client:
-                base_uri: 'http://user_service_nginx'
+                base_uri: '%env(USER_SERVICE_URL)%'
                 timeout: 30
             product_service.client:
-                base_uri: 'http://product_service_nginx'
+                base_uri: '%env(PRODUCT_SERVICE_URL)%'
                 timeout: 30
             order_service.client:
-                base_uri: 'http://order_service_nginx'
+                base_uri: '%env(ORDER_SERVICE_URL)%'
                 timeout: 30
 
 when@test:

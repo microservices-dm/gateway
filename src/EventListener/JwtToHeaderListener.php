@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\EventListener;
 
+use App\Service\JwtValidationServiceInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
-use Symfony\Component\HttpKernel\Event\ResponseEvent;
-use Lexik\Bundle\JWTAuthenticationBundle\Services\JWTTokenManagerInterface;
-use Lexik\Bundle\JWTAuthenticationBundle\Encoder\JWTEncoderInterface;
 
 class JwtToHeaderListener
 {
     public function __construct(
-        private JWTEncoderInterface $jwtEncoder
+        private readonly JwtValidationServiceInterface $jwtValidator,
     ) {}
 
     public function onKernelRequest(RequestEvent $event): void
@@ -22,30 +21,34 @@ class JwtToHeaderListener
         }
 
         $request = $event->getRequest();
+
+        // Identity-заголовки имеет право выставлять только сам gateway по валидному JWT.
+        // Снимаем всё, что клиент мог прислать сам, чтобы их нельзя было подделать.
+        foreach (['X-User-Id', 'X-User-Email', 'X-User-Role', 'X-Internal-Key'] as $protectedHeader) {
+            $request->headers->remove($protectedHeader);
+        }
+
         $token = $this->extractToken($request);
 
-        if (!$token) {
+        if (!$token || !$this->jwtValidator->validate($token)) {
             return;
         }
 
-        try {
-            $payload = $this->jwtEncoder->decode($token);
-
-            // Добавляем заголовки для проксирования в микросервисы
-            $request->headers->set('X-User-Id', (string) $payload['user_id']);
-            $request->headers->set('X-User-Email', $payload['email']);
-            $request->headers->set('X-User-Role', $payload['roles']);
-
-            // Сохраняем в атрибутах для использования в контроллерах
-            $request->attributes->set('user_id', $payload['user_id']);
-            $request->attributes->set('user_roles', $payload['roles']);
-
-        } catch (\Exception $e) {
-            // Токен невалидный - пусть микросервис обработает
+        $user = $this->jwtValidator->getUserFromToken($token);
+        if (!$user) {
+            return;
         }
+
+        $request->headers->set('X-User-Id', (string) $user['id']);
+        $request->headers->set('X-User-Email', $user['email']);
+        $request->headers->set('X-User-Role', implode(',', (array) $user['roles']));
+
+        $request->attributes->set('user_id', $user['id']);
+        $request->attributes->set('user_email', $user['email']);
+        $request->attributes->set('user_roles', $user['roles']);
     }
 
-    private function extractToken($request): ?string
+    private function extractToken(Request $request): ?string
     {
         $authHeader = $request->headers->get('Authorization');
 
